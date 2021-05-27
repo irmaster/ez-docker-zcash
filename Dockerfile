@@ -1,5 +1,6 @@
-FROM debian:jessie-slim as builder
-MAINTAINER Ville Törhönen <ville@torhonen.fi>
+FROM debian:stretch as builder
+
+ENV GIT_BRANCH=master
 
 # Install build dependencies
 # Separate layer so we can cache things
@@ -22,23 +23,24 @@ RUN set -x && \
       wget \
       bsdmainutils \
       automake && \
-    rm -rf /var/lib/apt/lists/* 
+    rm -rf /var/lib/apt/lists/*
 
 # Clone repo and do Sprout proving
 RUN set -x && \
     git clone https://github.com/zcash/zcash.git /tmp/zcash && \
     cd /tmp/zcash && \
-    git checkout v1.0.12 && \
+    git checkout ${GIT_BRANCH} && \
     bash zcutil/fetch-params.sh
 
 # Build the app
 RUN set -x && \
+    apt-get update && \
+    apt-get install -y curl && \
     cd /tmp/zcash && \
-    bash zcutil/build.sh --disable-rust -j$(nproc)
+    bash zcutil/build.sh -j$(nproc)
 
 # Copy binaries and libs from builder to a separate image
-FROM debian:jessie-slim
-MAINTAINER Ville Törhönen <ville@torhonen.fi>
+FROM debian:stretch-slim
 
 RUN  mkdir -p /zcash/data && \
      mkdir -p /root/.zcash
